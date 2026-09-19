@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Matchday — Squad Stats & Leaderboard</title>
+<style>
+  :root{
+    --pitch-deep:#16302A; --pitch-mid:#234A3A; --chalk:#F5F3EC;
+    --gold:#E3B23C; --gold-dark:#B9862A; --line:#D8D3C4;
+    --danger:#B3432D; --danger-bg:#F7E3DD; --good-bg:#E6EEE3;
+    --bg:#0E1713; --surface:#16211B; --surface-2:#1B2721;
+    --text:#EEEAE0; --text-soft:#9FAEA5; --border:#2A3931;
+    --accent:#E3B23C; --accent-ink:#1A1206;
+    --font-display:Impact,"Arial Narrow",Arial,sans-serif;
+    --font-body:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text)}
+  body{font-family:var(--font-body);-webkit-font-smoothing:antialiased;min-height:100vh}
+  button,input,select{font:inherit}
+  #app{max-width:640px;margin:0 auto;padding-bottom:48px}
+
+  .hero{
+    background:repeating-linear-gradient(100deg,var(--pitch-deep) 0 34px,var(--pitch-mid) 34px 68px);
+    padding:28px 20px 22px;
+  }
+  .hero-title{font-family:var(--font-display);font-weight:600;font-size:34px;letter-spacing:.3px;margin:0;line-height:1}
+  .hero-sub{margin:8px 0 0;font-size:14px;color:#D9D4C2;max-width:46ch;line-height:1.45}
+
+  .nav{
+    display:flex;gap:6px;padding:12px 16px;overflow-x:auto;background:var(--bg);
+    position:sticky;top:0;z-index:5;border-bottom:1px solid var(--border)
+  }
+  .nav button{
+    font-weight:600;font-size:13.5px;padding:9px 15px;border-radius:999px;
+    border:1px solid var(--border);background:var(--surface);color:var(--text-soft);
+    cursor:pointer;white-space:nowrap
+  }
+  .nav button.active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
+  .banner{margin:12px 16px 0;padding:10px 14px;border-radius:10px;font-size:13px;background:var(--good-bg);color:#203126;border:1px solid var(--border)}
+  .banner.warn{background:var(--danger-bg);color:#54251B}
+
+  .section{padding:18px 16px 6px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px}
+  h2.card-title{font-family:var(--font-display);font-weight:600;font-size:20px;margin:0 0 4px}
+  p.card-hint{margin:0 0 16px;color:var(--text-soft);font-size:13.5px}
+
+  label{display:block;font-size:13px;font-weight:600;color:var(--text-soft);margin:14px 0 6px}
+  label:first-of-type{margin-top:0}
+  input,select{
+    width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--border);
+    background:var(--surface-2);color:var(--text);font-size:15px
+  }
+  input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+  .check-row{display:flex;align-items:center;gap:9px;margin-top:14px}
+  .check-row input{width:18px;height:18px}
+  .check-row label{margin:0;font-weight:500;color:var(--text)}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:700;
+    font-size:14.5px;padding:12px 18px;border-radius:10px;border:none;cursor:pointer
+  }
+  .btn-primary{background:var(--accent);color:var(--accent-ink);width:100%;margin-top:18px}
+  .btn-secondary{background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
+  .btn-danger{background:var(--danger-bg);color:var(--danger);border:1px solid var(--border)}
+  .btn-ghost{background:transparent;color:var(--text-soft);text-decoration:underline;padding:6px 0;font-weight:600;font-size:13.5px}
+  .btn-stat{padding:6px 9px;font-size:12px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:6px;margin:2px;font-weight:600}
+  .btn-stat:active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .error-text{color:#FF8E75;font-size:13px;margin-top:10px}
+  .success-text{color:#A9D9A8;font-size:13px;margin-top:10px}
+  .toggle-row{margin-top:16px;font-size:13.5px;color:var(--text-soft)}
+
+  .lb-row{
+    display:flex;align-items:center;gap:12px;padding:12px 6px;border-bottom:1px solid var(--border);
+    cursor:pointer;background:none;border-left:0;border-right:0;border-top:0;width:100%;
+    text-align:left;color:var(--text)
+  }
+  .lb-row:last-child{border-bottom:none}
+  .lb-row.pow{background:rgba(227,178,60,0.08);border-left:3px solid var(--accent)}
+  .rank-badge{
+    font-family:var(--font-display);font-size:15px;font-weight:600;width:30px;height:30px;
+    border-radius:50%;display:flex;align-items:center;justify-content:center;
+    background:var(--surface-2);border:1px solid var(--border);flex-shrink:0
+  }
+  .rank-badge.top1{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .pow-badge{
+    font-family:var(--font-display);font-size:11px;font-weight:700;
+    background:var(--accent);color:var(--accent-ink);padding:3px 7px;border-radius:999px;
+    display:inline-block;margin-left:6px;text-transform:uppercase;letter-spacing:0.5px
+  }
+  .lb-main{flex:1;min-width:0}.lb-name{font-weight:700;font-size:15px}
+  .lb-meta{font-size:12.5px;color:var(--text-soft);margin-top:2px}
+  .pos-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;position:relative;top:-1px}
+  .pos-GK{background:#4A7FB5}.pos-DEF{background:#4C8C5E}.pos-MID{background:var(--gold-dark)}.pos-FWD{background:var(--danger)}
+  .lb-rating{font-family:var(--font-display);font-size:22px;font-weight:600;text-align:right}
+  .lb-rating .unit{font-size:11px;font-family:var(--font-body);color:var(--text-soft);display:block;font-weight:500}
+
+  .empty{text-align:center;padding:32px 16px;color:var(--text-soft);font-size:14px;line-height:1.45}
+  .profile-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .profile-name{font-family:var(--font-display);font-size:24px;font-weight:600;margin:0}
+  .profile-meta{color:var(--text-soft);font-size:13.5px;margin-top:4px}
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+  .stat-box{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center}
+  .stat-box .num{font-family:var(--font-display);font-size:20px;font-weight:600}
+  .stat-box .lab{font-size:10.5px;color:var(--text-soft);margin-top:2px}
+
+  .game-row{padding:12px 0;border-bottom:1px solid var(--border)}
+  .game-row:last-child{border-bottom:none}
+  .game-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .game-date{font-weight:700;font-size:13.5px}.game-opp{color:var(--text-soft);font-size:12.5px}
+  .game-rating{font-family:var(--font-display);font-weight:600;font-size:16px;color:var(--accent)}
+  .game-stats{font-size:12.5px;color:var(--text-soft);margin-top:4px}
+  .game-actions{margin-top:6px}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .stat-buttons{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;margin-bottom:8px}
+  .stat-display{font-size:14px;font-weight:600;padding:8px 12px;background:var(--surface-2);border-radius:8px;margin:4px 0}
+  .small{padding:7px 10px;font-size:12px;border-radius:7px}
+  footer.foot{text-align:center;color:var(--text-soft);font-size:11.5px;padding:20px 16px 8px}
+
+  @media(max-width:420px){
+    .hero-title{font-size:28px}
+    .stat-grid{grid-template-columns:repeat(2,1fr)}
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+"use strict";
+
+const SUPABASE_URL = "https://aogemygieeaidbkmoios.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_KocyJAKRCZQ8VjVj-H_W7w__uXVOP4r";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+const POSITIONS={
+  GK:{
+    label:"Goalkeeper",
+    fields:[
+      {key:"saves",label:"Saves",type:"number",min:0,def:0},
+      {key:"goalsConceded",label:"Goals conceded",type:"number",min:0,def:0},
+      {key:"cleanSheet",label:"Clean sheet",type:"checkbox",def:false},
+      {key:"minutes",label:"Minutes played",type:"number",min:0,max:130,def:90}
+    ],
+    rate:s=>clamp(6+s.saves*.3-s.goalsConceded*.5+(s.cleanSheet?1.2:0),1,10),
+    totals:["saves","goalsConceded"]
+  },
+  DEF:{
+    label:"Defender",
+    fields:[
+      {key:"goals",label:"Goals",type:"number",min:0,def:0},
+      {key:"assists",label:"Assists",type:"number",min:0,def:0},
+      {key:"tackles",label:"Tackles",type:"number",min:0,def:0},
+      {key:"interceptions",label:"Interceptions",type:"number",min:0,def:0},
+      {key:"cleanSheet",label:"Clean sheet",type:"checkbox",def:false},
+      {key:"minutes",label:"Minutes played",type:"number",min:0,max:130,def:90}
+    ],
+    rate:s=>clamp(6+s.goals*1+s.assists*.7+s.tackles*.15+s.interceptions*.15+(s.cleanSheet?.8:0),1,10),
+    totals:["goals","assists"]
+  },
+  MID:{
+    label:"Midfielder",
+    fields:[
+      {key:"goals",label:"Goals",type:"number",min:0,def:0},
+      {key:"assists",label:"Assists",type:"number",min:0,def:0},
+      {key:"keyPasses",label:"Key passes",type:"number",min:0,def:0},
+      {key:"tackles",label:"Tackles",type:"number",min:0,def:0},
+      {key:"minutes",label:"Minutes played",type:"number",min:0,max:130,def:90}
+    ],
+    rate:s=>clamp(6+s.goals*.9+s.assists*.6+s.keyPasses*.1+s.tackles*.1,1,10),
+    totals:["goals","assists"]
+  },
+  FWD:{
+    label:"Forward",
+    fields:[
+      {key:"goals",label:"Goals",type:"number",min:0,def:0},
+      {key:"assists",label:"Assists",type:"number",min:0,def:0},
+      {key:"shotsOnTarget",label:"Shots on target",type:"number",min:0,def:0},
+      {key:"minutes",label:"Minutes played",type:"number",min:0,max:130,def:90}
+    ],
+    rate:s=>clamp(6+s.goals*.8+s.assists*.5+s.shotsOnTarget*.1,1,10),
+    totals:["goals","assists"]
+  }
+};
+
+const POSITION_ORDER=["GK","DEF","MID","FWD"];
+let state={players:[]};
+let ui={tab:"leaderboard",profileId:null,mode:"register",error:"",notice:"",loading:true};
+const app=document.getElementById("app");
+
+function clamp(n,a,b){return Math.min(b,Math.max(a,n))}
+function fmt1(n){return Number(n).toFixed(1)}
+function esc(s){
+  return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function todayISO(){
+  const d=new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function getWeekStart(date){
+  const d=new Date(date);
+  const day=d.getDay();
+  const diff=d.getDate()-day+(day===0?-6:1);
+  return new Date(d.setDate(diff)).toISOString().split('T')[0];
+}
+function formatDate(x){
+  if(!x)return "";
+  const d=new Date(x+"T00:00:00");
+  return d.toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"});
+}
+function myId(){ return sb.auth.getUser().then(({data})=>data.user?.id||null); }
+function findPlayer(id){return state.players.find(p=>p.id===id)||null;}
+function avgRating(p){
+  if(!p.games.length)return null;
+  return p.games.reduce((a,g)=>a+Number(g.rating||0),0)/p.games.length;
+}
+function totalStat(p,key){
+  return p.games.reduce((a,g)=>a+Number(g.stats?.[key]||0),0);
+}
+
+function getWeeklyRatings(){
+  const thisWeekStart=getWeekStart(todayISO());
+  const weekRatings={};
+  state.players.forEach(p=>{
+    const weekGames=p.games.filter(g=>getWeekStart(g.date)===thisWeekStart);
+    if(weekGames.length>0){
+      weekRatings[p.id]=weekGames.reduce((a,g)=>a+Number(g.rating||0),0)/weekGames.length;
+    }
+  });
+  return weekRatings;
+}
+
+function getPOW(){
+  const weeklyRatings=getWeeklyRatings();
+  if(Object.keys(weeklyRatings).length===0)return null;
+  return Object.keys(weeklyRatings).reduce((a,b)=>weeklyRatings[b]>weeklyRatings[a]?b:a);
+}
+
+async function loadData(){
+  ui.loading=true;
+  render();
+
+  const [{data:players,error:pe},{data:games,error:ge}] = await Promise.all([
+    sb.from("players").select("id,name,location,position,created_at").order("created_at",{ascending:true}),
+    sb.from("games").select("*").order("match_date",{ascending:false})
+  ]);
+
+  if(pe || ge){
+    ui.error=(pe?.message||ge?.message||"Could not load Matchday data.");
+    state.players=[];
+  }else{
+    const map={};
+    (players||[]).forEach(p=>{
+      map[p.id]={...p,games:[]};
+    });
+    (games||[]).forEach(g=>{
+      if(map[g.player_id]){
+        const stats={
+          goals:Number(g.goals||0),
+          assists:Number(g.assists||0),
+          tackles:Number(g.tackles||0),
+          interceptions:Number(g.interceptions||0),
+          keyPasses:Number(g.key_passes||0),
+          shotsOnTarget:Number(g.shots_on_target||0),
+          saves:Number(g.saves||0),
+          goalsConceded:Number(g.goals_conceded||0),
+          cleanSheet:!!g.clean_sheet,
+          minutes:Number(g.minutes||0)
+        };
+        map[g.player_id].games.push({
+          id:g.id,date:g.match_date,opponent:g.opponent||"",stats,rating:Number(g.rating||0)
+        });
+      }
+    });
+    state.players=Object.values(map);
+  }
+
+  ui.loading=false;
+}
+
+async function ensureMyProfile(){
+  const {data:{user}}=await sb.auth.getUser();
+  if(!user)return;
+
+  const existing=state.players.find(p=>p.id===user.id);
+  if(existing)return;
+
+  const m=user.user_metadata||{};
+  if(!m.name || !m.position)return;
+
+  const {error}=await sb.from("players").insert({
+    id:user.id,
+    name:String(m.name).trim(),
+    location:String(m.location||"").trim(),
+    position:String(m.position)
+  });
+
+  if(!error){
+    await sb.from("player_private").insert({
+      user_id:user.id,
+      email:user.email||null
+    });
+    await loadData();
+  }else{
+    ui.error=error.message;
+  }
+}
+
+function render(){
+  const meIdPromise=myId();
+  meIdPromise.then(meId=>{
+    const me=findPlayer(meId);
+    app.innerHTML=renderHero()+renderNav(me)+
+      (ui.error?`<div class="banner warn">${esc(ui.error)}</div>`:"")+
+      (ui.notice?`<div class="banner">${esc(ui.notice)}</div>`:"")+
+      `<div class="section">${renderTab(me)}</div>`+
+      `<footer class="foot">Shared online · Matchday</footer>`;
+    bind();
+  });
+}
+
+function renderHero(){
+  return `<div class="hero"><p class="hero-title">Matchday</p>
+  <p class="hero-sub">Log your goals, assists and form after every game — the squad rating and leaderboard update for everyone.</p></div>`;
+}
+
+function renderNav(me){
+  const tabs=[["leaderboard","Leaderboard"]];
+  if(me)tabs.push(["log","Log a game"],["profile","My profile"]);
+  else tabs.push(["join","Join"]);
+  return `<div class="nav">${tabs.map(([k,l])=>`<button data-action="tab" data-tab="${k}" class="${ui.tab===k?"active":""}">${l}</button>`).join("")}</div>`;
+}
+
+function renderTab(me){
+  if(ui.loading)return `<div class="card"><div class="empty">Loading Matchday…</div></div>`;
+  if(ui.profileId){
+    const p=findPlayer(ui.profileId);
+    if(p)return renderProfile(p,p.id===me?.id);
+    ui.profileId=null;
+  }
+  if(ui.tab==="profile"&&me)return renderProfile(me,true);
+  if(ui.tab==="log"&&me)return renderLog(me);
+  if(ui.tab==="join"&&!me)return renderJoin();
+  if(!me&&ui.tab!=="leaderboard")return renderJoin();
+  return renderLeaderboard();
+}
+
+function renderLeaderboard(){
+  const pow=getPOW();
+  const rated=state.players.filter(p=>p.games.length).sort((a,b)=>avgRating(b)-avgRating(a)||b.games.length-a.games.length);
+  const unrated=state.players.filter(p=>!p.games.length);
+  let h=`<div class="card"><h2 class="card-title">Leaderboard</h2><p class="card-hint">Ranked by average match rating.</p>`;
+  if(!rated.length)h+=`<div class="empty">No games logged yet. Be the first to add your stats after a match.</div>`;
+  else rated.forEach((p,i)=>h+=renderLbRow(p,i+1,p.id===pow));
+  h+=`</div>`;
+  if(unrated.length){
+    h+=`<div class="card"><h2 class="card-title" style="font-size:16px">Warming up</h2><p class="card-hint">Registered, no games logged yet.</p>`;
+    unrated.forEach(p=>h+=renderLbRow(p,null,false)); h+=`</div>`;
+  }
+  if(!state.players.length){
+    h+=`<div class="card"><div class="empty">No players registered yet.</div></div>`;
+  }
+  return h;
+}
+
+function renderLbRow(p,rank,isPOW){
+  const r=avgRating(p);
+  return `<button class="lb-row ${isPOW?"pow":""}" data-action="profile" data-id="${esc(p.id)}">
+    <span class="rank-badge ${rank===1?"top1":""}">${rank||"·"}</span>
+    <span class="lb-main"><span class="lb-name">${esc(p.name)}${isPOW?`<span class="pow-badge">🏆 POW</span>`:""}</span>
+    <span class="lb-meta"><span class="pos-dot pos-${p.position}"></span>${esc(POSITIONS[p.position]?.label||p.position)} · ${esc(p.location||"")}</span></span>
+    <span class="lb-rating">${r===null?"—":fmt1(r)}<span class="unit">${p.games.length} ${p.games.length===1?"game":"games"}</span></span>
+  </button>`;
+}
+
+function renderJoin(){
+  const sign=ui.mode==="signin";
+  return `<div class="card">
+    <h2 class="card-title">${sign?"Sign in":"Register"}</h2>
+    <p class="card-hint">${sign?"Use your Matchday account.":"Create your Matchday account."}</p>
+    <form data-form="${sign?"signin":"register"}">
+      ${!sign?`<label>Name</label><input name="name" type="text" placeholder="e.g. Aarush Shorya" required>
+      <label>Email</label><input name="email" type="email" placeholder="you@example.com" required>
+      <label>Password</label><input name="password" type="password" minlength="6" placeholder="At least 6 characters" required>
+      <label>Where you're from</label><input name="location" type="text" placeholder="e.g. Begusarai, Bihar" required>
+      <label>Position</label><select name="position" required><option value="">Select a position…</option>${POSITION_ORDER.map(k=>`<option value="${k}">${POSITIONS[k].label}</option>`).join("")}</select>`
+      :`<label>Email</label><input name="email" type="email" placeholder="you@example.com" required>
+      <label>Password</label><input name="password" type="password" placeholder="Your password" required>`}
+      <button class="btn btn-primary" type="submit">${sign?"Sign in":"Join the squad"}</button>
+    </form>
+    <div class="toggle-row"><button class="btn-ghost" data-action="mode" data-mode="${sign?"register":"signin"}">${sign?"New player? Register":"Already registered? Sign in"}</button></div>
+  </div>`;
+}
+
+function renderLog(p){
+  const cfg=POSITIONS[p.position];
+  const quickAddHtml=getQuickAddButtons();
+  return `<div class="card"><h2 class="card-title">Log a game</h2><p class="card-hint">${esc(p.name)} · ${cfg.label}</p>
+    <form data-form="game">
+      <label>Date</label><input name="date" type="date" value="${todayISO()}" required>
+      <label>Opponent</label><input name="opponent" type="text" placeholder="e.g. Local XI">
+      ${cfg.fields.map(f=>f.type==="checkbox"
+        ?`<div class="check-row"><input id="g_${f.key}" name="${f.key}" type="checkbox"><label for="g_${f.key}">${f.label}</label></div>`
+        :`<label>${f.label}</label><div class="stat-display" data-stat="${f.key}">0</div><div class="stat-buttons" data-stat="${f.key}">${[1,2,3].map(v=>`<button type="button" class="btn-stat" data-inc="${f.key}" data-val="${v}">+${v}</button>`).join("")}${f.key!=="minutes"?`<button type="button" class="btn-stat" data-dec="${f.key}" data-val="1">−1</button>`:""}${f.key==="minutes"?`<button type="button" class="btn-stat" data-dec="${f.key}" data-val="10">−10</button>`:""}</div><input style="display:none" name="${f.key}" type="number" min="${f.min??0}" ${f.max!=null?`max="${f.max}"`:""} value="${f.def}" required>`
+      ).join("")}
+      <button class="btn btn-primary" type="submit">Save match</button>
+    </form>
+  </div>`;
+}
+
+function getQuickAddButtons(){
+  return "";
+}
+
+function renderProfile(p,own){
+  const r=avgRating(p);
+  const goals=p.position==="GK"?0:totalStat(p,"goals");
+  const assists=p.position==="GK"?0:totalStat(p,"assists");
+  let h=`<div class="card"><div class="profile-head"><div>
+    <h2 class="profile-name">${esc(p.name)}</h2>
+    <div class="profile-meta"><span class="pos-dot pos-${p.position}"></span>${POSITIONS[p.position].label} · ${esc(p.location||"")}</div>
+  </div></div>
+  <div class="stat-grid">
+    <div class="stat-box
